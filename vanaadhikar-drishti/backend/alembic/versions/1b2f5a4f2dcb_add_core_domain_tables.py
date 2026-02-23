@@ -1,0 +1,840 @@
+"""add core domain tables
+
+Revision ID: 1b2f5a4f2dcb
+Revises: 00a39d856a74
+Create Date: 2026-02-23
+"""
+from __future__ import annotations
+
+from datetime import date, datetime
+
+from alembic import op
+import sqlalchemy as sa
+from sqlalchemy.dialects import mysql
+
+
+# revision identifiers, used by Alembic.
+revision = "1b2f5a4f2dcb"
+down_revision = "00a39d856a74"
+branch_labels = None
+depends_on = None
+
+
+def upgrade() -> None:
+  op.create_table(
+    "users",
+    sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+    sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+    sa.Column("id", mysql.BIGINT(unsigned=True), primary_key=True),
+    sa.Column("email", sa.String(length=255), nullable=False),
+    sa.Column("name", sa.String(length=255), nullable=False),
+    sa.Column("picture", sa.String(length=512), nullable=True),
+    sa.Column("provider", sa.String(length=32), nullable=False, server_default=sa.text("'google'")),
+    sa.Column("last_login", sa.DateTime(), nullable=True),
+    mysql_charset="utf8mb4",
+  )
+  op.create_index("ix_users_email", "users", ["email"], unique=True)
+
+  op.create_table(
+    "villages",
+    sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+    sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+    sa.Column("id", mysql.BIGINT(unsigned=True), primary_key=True),
+    sa.Column("code", sa.String(length=64), nullable=False),
+    sa.Column("name", sa.String(length=255), nullable=False),
+    sa.Column("gram_panchayat", sa.String(length=255), nullable=True),
+    sa.Column("block", sa.String(length=255), nullable=True),
+    sa.Column("district", sa.String(length=255), nullable=False),
+    sa.Column("state", sa.String(length=8), nullable=False),
+    sa.Column("population", sa.Integer(), nullable=True),
+    sa.Column("st_population", sa.Integer(), nullable=True),
+    sa.Column("total_households", sa.Integer(), nullable=True),
+    sa.Column("pvtg_present", sa.Boolean(), nullable=False, server_default=sa.text("0")),
+    sa.Column("tribal_groups", mysql.JSON(), nullable=True),
+    sa.Column("total_claims", sa.Integer(), nullable=False, server_default=sa.text("0")),
+    sa.Column("granted_claims", sa.Integer(), nullable=False, server_default=sa.text("0")),
+    sa.Column("pending_claims", sa.Integer(), nullable=False, server_default=sa.text("0")),
+    sa.Column("rejected_claims", sa.Integer(), nullable=False, server_default=sa.text("0")),
+    sa.Column("ifr_granted_area", sa.Float(), nullable=False, server_default=sa.text("0")),
+    sa.Column("cfr_granted_area", sa.Float(), nullable=False, server_default=sa.text("0")),
+    sa.Column("cr_granted_area", sa.Float(), nullable=False, server_default=sa.text("0")),
+    sa.Column("saturation_score", sa.Integer(), nullable=False, server_default=sa.text("0")),
+    sa.Column("gps_lat", sa.Float(), nullable=True),
+    sa.Column("gps_lng", sa.Float(), nullable=True),
+    sa.Column("assets", mysql.JSON(), nullable=True),
+    sa.Column("scheme_enrollments", mysql.JSON(), nullable=True),
+    sa.Column("last_satellite_update", sa.String(length=64), nullable=True),
+    mysql_charset="utf8mb4",
+  )
+  op.create_index("ix_villages_code", "villages", ["code"], unique=True)
+  op.create_index("ix_villages_state", "villages", ["state"], unique=False)
+
+  op.create_table(
+    "officers",
+    sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+    sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+    sa.Column("id", mysql.BIGINT(unsigned=True), primary_key=True),
+    sa.Column("officer_id", sa.String(length=64), nullable=False),
+    sa.Column("name", sa.String(length=255), nullable=False),
+    sa.Column("designation", sa.String(length=64), nullable=False),
+    sa.Column("state", sa.String(length=8), nullable=True),
+    sa.Column("district", sa.String(length=255), nullable=True),
+    sa.Column("block", sa.String(length=255), nullable=True),
+    sa.Column("mobile", sa.String(length=32), nullable=False),
+    sa.Column("email", sa.String(length=255), nullable=False),
+    sa.Column("last_active", sa.DateTime(), nullable=False),
+    sa.Column("total_claims_handled", sa.Integer(), nullable=False, server_default=sa.text("0")),
+    sa.Column("pending_actions", sa.Integer(), nullable=False, server_default=sa.text("0")),
+    mysql_charset="utf8mb4",
+  )
+  op.create_index("ix_officers_officer_id", "officers", ["officer_id"], unique=True)
+
+  op.create_table(
+    "claims",
+    sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+    sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+    sa.Column("id", mysql.BIGINT(unsigned=True), primary_key=True),
+    sa.Column("claim_id", sa.String(length=64), nullable=False),
+    sa.Column("claimant_name", sa.String(length=255), nullable=False),
+    sa.Column("claimant_aadhaar", sa.String(length=32), nullable=True),
+    sa.Column("village_name", sa.String(length=255), nullable=False),
+    sa.Column("village_code", sa.String(length=64), nullable=False),
+    sa.Column("gram_panchayat", sa.String(length=255), nullable=True),
+    sa.Column("block", sa.String(length=255), nullable=True),
+    sa.Column("district", sa.String(length=255), nullable=False),
+    sa.Column("state", sa.String(length=8), nullable=False),
+    sa.Column("claim_type", sa.String(length=8), nullable=False),
+    sa.Column("form_number", sa.String(length=32), nullable=True),
+    sa.Column("area_acres", sa.Float(), nullable=False),
+    sa.Column("survey_khasra_no", sa.String(length=64), nullable=True),
+    sa.Column("claim_date", sa.Date(), nullable=False),
+    sa.Column("verification_date", sa.Date(), nullable=True),
+    sa.Column("decision_date", sa.Date(), nullable=True),
+    sa.Column("status", sa.String(length=32), nullable=False),
+    sa.Column("rejection_reason", sa.String(length=1000), nullable=True),
+    sa.Column("patte_number", sa.String(length=128), nullable=True),
+    sa.Column("patte_issued_date", sa.Date(), nullable=True),
+    sa.Column("tribal_group", sa.String(length=128), nullable=True),
+    sa.Column("is_pvtg", sa.Boolean(), nullable=False, server_default=sa.text("0")),
+    sa.Column("notes", sa.String(length=512), nullable=True),
+    sa.Column("gps_lat", sa.Float(), nullable=True),
+    sa.Column("gps_lng", sa.Float(), nullable=True),
+    sa.Column("boundary_geojson", mysql.JSON(), nullable=True),
+    sa.Column("scanned_doc_url", sa.String(length=512), nullable=True),
+    sa.Column("ocr_data", mysql.JSON(), nullable=True),
+    sa.Column("assigned_officer_id", sa.String(length=64), nullable=True),
+    mysql_charset="utf8mb4",
+  )
+  op.create_index("ix_claims_claim_id", "claims", ["claim_id"], unique=True)
+  op.create_index("idx_claim_state", "claims", ["state"], unique=False)
+  op.create_index("idx_claim_district", "claims", ["district"], unique=False)
+  op.create_index("idx_claim_village", "claims", ["village_code"], unique=False)
+  op.create_index("idx_claim_status", "claims", ["status"], unique=False)
+
+  op.create_table(
+    "grievances",
+    sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+    sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+    sa.Column("id", mysql.BIGINT(unsigned=True), primary_key=True),
+    sa.Column("grievance_id", sa.String(length=64), nullable=False),
+    sa.Column("claimant_name", sa.String(length=255), nullable=False),
+    sa.Column("claim_id", sa.String(length=64), nullable=True),
+    sa.Column("village_name", sa.String(length=255), nullable=False),
+    sa.Column("block", sa.String(length=255), nullable=True),
+    sa.Column("district", sa.String(length=255), nullable=False),
+    sa.Column("state", sa.String(length=8), nullable=False),
+    sa.Column("category", sa.String(length=64), nullable=False),
+    sa.Column("status", sa.String(length=32), nullable=False),
+    sa.Column("priority", sa.String(length=16), nullable=False),
+    sa.Column("assigned_officer_id", sa.String(length=64), nullable=True),
+    sa.Column("assigned_to", sa.String(length=255), nullable=True),
+    sa.Column("description", sa.String(length=1000), nullable=False),
+    sa.Column("filed_date", sa.Date(), nullable=True),
+    sa.Column("last_updated", sa.DateTime(), nullable=True),
+    sa.Column("days_open", sa.Integer(), nullable=False, server_default=sa.text("0")),
+    sa.Column("resolution", sa.String(length=1000), nullable=True),
+    sa.Column("source", sa.String(length=64), nullable=True),
+    sa.Column("channel", sa.String(length=64), nullable=True),
+    sa.Column("mobile", sa.String(length=32), nullable=True),
+    mysql_charset="utf8mb4",
+  )
+  op.create_index("ix_grievances_grievance_id", "grievances", ["grievance_id"], unique=True)
+  op.create_index("idx_grievances_state", "grievances", ["state"], unique=False)
+  op.create_index("idx_grievances_status", "grievances", ["status"], unique=False)
+
+  op.create_table(
+    "data_blobs",
+    sa.Column("id", mysql.BIGINT(unsigned=True), primary_key=True),
+    sa.Column("key", sa.String(length=128), nullable=False),
+    sa.Column("description", sa.String(length=512), nullable=True),
+    sa.Column("payload", mysql.JSON(), nullable=False),
+    sa.Column("created_at", sa.DateTime(), nullable=False, server_default=sa.text("now()")),
+    sa.Column("updated_at", sa.DateTime(), nullable=False, server_default=sa.text("now()"), onupdate=sa.text("now()")),
+    mysql_charset="utf8mb4",
+  )
+  op.create_index("ix_data_blobs_key", "data_blobs", ["key"], unique=True)
+
+  # Seed minimal production-ready reference data so the UI has non-random values
+  users_table = sa.table(
+    "users",
+    sa.column("email", sa.String()),
+    sa.column("name", sa.String()),
+    sa.column("provider", sa.String()),
+    sa.column("last_login", sa.DateTime()),
+  )
+  op.bulk_insert(
+    users_table,
+    [
+      {
+        "email": "admin@vanaadhikar.gov.in",
+        "name": "Vanaadhikar Admin",
+        "provider": "google",
+        "last_login": datetime(2026, 2, 20, 10, 0, 0),
+      }
+    ],
+  )
+
+  villages_table = sa.table(
+    "villages",
+    sa.column("code", sa.String()),
+    sa.column("name", sa.String()),
+    sa.column("gram_panchayat", sa.String()),
+    sa.column("block", sa.String()),
+    sa.column("district", sa.String()),
+    sa.column("state", sa.String()),
+    sa.column("population", sa.Integer()),
+    sa.column("st_population", sa.Integer()),
+    sa.column("pvtg_present", sa.Boolean()),
+    sa.column("tribal_groups", mysql.JSON()),
+    sa.column("total_claims", sa.Integer()),
+    sa.column("granted_claims", sa.Integer()),
+    sa.column("pending_claims", sa.Integer()),
+    sa.column("rejected_claims", sa.Integer()),
+    sa.column("ifr_granted_area", sa.Float()),
+    sa.column("cfr_granted_area", sa.Float()),
+    sa.column("cr_granted_area", sa.Float()),
+    sa.column("saturation_score", sa.Integer()),
+    sa.column("gps_lat", sa.Float()),
+    sa.column("gps_lng", sa.Float()),
+    sa.column("assets", mysql.JSON()),
+    sa.column("scheme_enrollments", mysql.JSON()),
+    sa.column("last_satellite_update", sa.String()),
+  )
+  op.bulk_insert(
+    villages_table,
+    [
+      {
+        "code": "MP-MAN-BK-001",
+        "name": "Sonpur",
+        "gram_panchayat": "Sonpur GP",
+        "block": "Bichhiya",
+        "district": "Mandla",
+        "state": "MP",
+        "population": 1243,
+        "st_population": 1102,
+        "pvtg_present": False,
+        "tribal_groups": ["Gond", "Baiga"],
+        "total_claims": 234,
+        "granted_claims": 198,
+        "pending_claims": 28,
+        "rejected_claims": 8,
+        "ifr_granted_area": 421.5,
+        "cfr_granted_area": 1234.0,
+        "cr_granted_area": 0,
+        "saturation_score": 72,
+        "gps_lat": 22.5984,
+        "gps_lng": 80.4121,
+        "assets": {
+          "agriculturalLandAcres": 342.5,
+          "forestCoverAcres": 1890.2,
+          "waterBodiesCount": 3,
+          "waterBodiesAreaAcres": 12.4,
+          "homesteadsCount": 212,
+          "ndviScore": 0.68,
+          "ndviTrend": "stable",
+          "groundwaterDepthM": 8.2,
+          "lastUpdated": "2025-12-01T00:00:00Z",
+        },
+        "scheme_enrollments": [
+          {"schemeId": "PM-KISAN", "eligibleCount": 178, "enrolledCount": 142, "gapCount": 36, "saturationPct": 79.8, "lastSynced": "2026-01-15"},
+          {"schemeId": "JJM", "eligibleCount": 212, "enrolledCount": 198, "gapCount": 14, "saturationPct": 93.4, "lastSynced": "2026-01-15"},
+          {"schemeId": "MGNREGA", "eligibleCount": 380, "enrolledCount": 310, "gapCount": 70, "saturationPct": 81.6, "lastSynced": "2026-01-15"},
+          {"schemeId": "PMAY-G", "eligibleCount": 98, "enrolledCount": 72, "gapCount": 26, "saturationPct": 73.5, "lastSynced": "2026-01-15"},
+          {"schemeId": "DAJGUA", "eligibleCount": 212, "enrolledCount": 134, "gapCount": 78, "saturationPct": 63.2, "lastSynced": "2026-01-15"},
+        ],
+        "last_satellite_update": "2026-01-20",
+      },
+      {
+        "code": "OD-KOR-LXP-012",
+        "name": "Laxmipur Tribal",
+        "gram_panchayat": "Laxmipur GP",
+        "block": "Laxmipur",
+        "district": "Koraput",
+        "state": "OD",
+        "population": 892,
+        "st_population": 834,
+        "pvtg_present": True,
+        "tribal_groups": ["Kondh", "Santhali"],
+        "total_claims": 189,
+        "granted_claims": 143,
+        "pending_claims": 31,
+        "rejected_claims": 15,
+        "ifr_granted_area": 312.8,
+        "cfr_granted_area": 2341.0,
+        "cr_granted_area": 123.5,
+        "saturation_score": 58,
+        "gps_lat": 18.9421,
+        "gps_lng": 82.8341,
+        "assets": {
+          "agriculturalLandAcres": 213.4,
+          "forestCoverAcres": 2901.1,
+          "waterBodiesCount": 5,
+          "waterBodiesAreaAcres": 23.1,
+          "homesteadsCount": 178,
+          "ndviScore": 0.74,
+          "ndviTrend": "improving",
+          "groundwaterDepthM": 14.6,
+          "lastUpdated": "2025-11-15T00:00:00Z",
+        },
+        "scheme_enrollments": [
+          {"schemeId": "PM-KISAN", "eligibleCount": 134, "enrolledCount": 89, "gapCount": 45, "saturationPct": 66.4, "lastSynced": "2026-01-15"},
+          {"schemeId": "JJM", "eligibleCount": 178, "enrolledCount": 112, "gapCount": 66, "saturationPct": 62.9, "lastSynced": "2026-01-15"},
+          {"schemeId": "MGNREGA", "eligibleCount": 312, "enrolledCount": 245, "gapCount": 67, "saturationPct": 78.5, "lastSynced": "2026-01-15"},
+          {"schemeId": "PM-JANMAN", "eligibleCount": 178, "enrolledCount": 98, "gapCount": 80, "saturationPct": 55.1, "lastSynced": "2026-01-15"},
+        ],
+        "last_satellite_update": "2026-01-18",
+      },
+    ],
+  )
+
+  officers_table = sa.table(
+    "officers",
+    sa.column("officer_id", sa.String()),
+    sa.column("name", sa.String()),
+    sa.column("designation", sa.String()),
+    sa.column("state", sa.String()),
+    sa.column("district", sa.String()),
+    sa.column("block", sa.String()),
+    sa.column("mobile", sa.String()),
+    sa.column("email", sa.String()),
+    sa.column("last_active", sa.DateTime()),
+    sa.column("total_claims_handled", sa.Integer()),
+    sa.column("pending_actions", sa.Integer()),
+  )
+  op.bulk_insert(
+    officers_table,
+    [
+      {
+        "officer_id": "OFF-MOTA-001",
+        "name": "Dr. Ananya Krishnamurthy",
+        "designation": "mota-nodal",
+        "mobile": "9810012345",
+        "email": "fra-tribal@gov.in",
+        "last_active": datetime(2026, 2, 19, 9, 0, 0),
+        "total_claims_handled": 0,
+        "pending_actions": 12,
+      },
+      {
+        "officer_id": "OFF-MP-SC-001",
+        "name": "Shri Ravindra Singh Baghel",
+        "designation": "state-commissioner",
+        "state": "MP",
+        "mobile": "9425012345",
+        "email": "ctd.tribal@mp.gov.in",
+        "last_active": datetime(2026, 2, 19, 8, 30, 0),
+        "total_claims_handled": 0,
+        "pending_actions": 38,
+      },
+      {
+        "officer_id": "OFF-MP-MAN-DC001",
+        "name": "Smt. Priya Upadhyay",
+        "designation": "district-collector",
+        "state": "MP",
+        "district": "Mandla",
+        "mobile": "9425098765",
+        "email": "dc.mandla@mp.gov.in",
+        "last_active": datetime(2026, 2, 18, 16, 45, 0),
+        "total_claims_handled": 4312,
+        "pending_actions": 24,
+      },
+      {
+        "officer_id": "OFF-MP-MAN-RO001",
+        "name": "Shri Mohan Dhurve",
+        "designation": "range-officer",
+        "state": "MP",
+        "district": "Mandla",
+        "block": "Bichhiya",
+        "mobile": "8982134521",
+        "email": "ro.bichhiya@mp.gov.in",
+        "last_active": datetime(2026, 2, 19, 7, 12, 0),
+        "total_claims_handled": 892,
+        "pending_actions": 7,
+      },
+    ],
+  )
+
+  claims_table = sa.table(
+    "claims",
+    sa.column("claim_id", sa.String()),
+    sa.column("claimant_name", sa.String()),
+    sa.column("claimant_aadhaar", sa.String()),
+    sa.column("village_name", sa.String()),
+    sa.column("village_code", sa.String()),
+    sa.column("gram_panchayat", sa.String()),
+    sa.column("block", sa.String()),
+    sa.column("district", sa.String()),
+    sa.column("state", sa.String()),
+    sa.column("claim_type", sa.String()),
+    sa.column("form_number", sa.String()),
+    sa.column("area_acres", sa.Float()),
+    sa.column("survey_khasra_no", sa.String()),
+    sa.column("claim_date", sa.Date()),
+    sa.column("verification_date", sa.Date()),
+    sa.column("decision_date", sa.Date()),
+    sa.column("status", sa.String()),
+    sa.column("rejection_reason", sa.String()),
+    sa.column("patte_number", sa.String()),
+    sa.column("patte_issued_date", sa.Date()),
+    sa.column("tribal_group", sa.String()),
+    sa.column("is_pvtg", sa.Boolean()),
+    sa.column("notes", sa.String()),
+    sa.column("gps_lat", sa.Float()),
+    sa.column("gps_lng", sa.Float()),
+    sa.column("ocr_data", mysql.JSON()),
+    sa.column("assigned_officer_id", sa.String()),
+    sa.column("scanned_doc_url", sa.String()),
+  )
+  op.bulk_insert(
+    claims_table,
+    [
+      {
+        "claim_id": "IFR-MP-2024-001234",
+        "claimant_name": "Ramesh Kumar Gond",
+        "village_name": "Sonpur",
+        "village_code": "MP-MAN-BK-001",
+        "gram_panchayat": "Sonpur GP",
+        "block": "Bichhiya",
+        "district": "Mandla",
+        "state": "MP",
+        "claim_type": "IFR",
+        "form_number": "Form-A",
+        "area_acres": 2.5,
+        "survey_khasra_no": "142/2",
+        "claim_date": date(2024, 3, 15),
+        "verification_date": date(2024, 4, 20),
+        "decision_date": date(2024, 6, 10),
+        "status": "granted",
+        "patte_number": "PTTE-MP-MAN-2024-001234",
+        "patte_issued_date": date(2024, 6, 15),
+        "tribal_group": "Gond",
+        "is_pvtg": False,
+        "gps_lat": 22.5984,
+        "gps_lng": 80.4121,
+        "ocr_data": {
+          "rawText": "Form A — Individual Forest Rights Claim\nClaimant: Ramesh Kumar Gond\nVillage: Sonpur, Block: Bichhiya, District: Mandla\nKhasra No: 142/2, Area: 2.5 Acres",
+          "entities": [
+            {"type": "CLAIMANT_NAME", "value": "Ramesh Kumar Gond", "confidence": 0.97, "startPos": 45, "endPos": 62},
+            {"type": "VILLAGE_NAME", "value": "Sonpur", "confidence": 0.99, "startPos": 71, "endPos": 77},
+            {"type": "KHASRA_NO", "value": "142/2", "confidence": 0.95, "startPos": 120, "endPos": 125},
+            {"type": "AREA", "value": "2.5 Acres", "confidence": 0.98, "startPos": 133, "endPos": 141},
+          ],
+          "confidence": 0.97,
+          "modelVersion": "IndicNER-FRA-v2.1",
+          "processedAt": "2024-03-16T08:00:00Z",
+          "needsHumanReview": False,
+        },
+      },
+      {
+        "claim_id": "IFR-OD-2024-007831",
+        "claimant_name": "Sukri Devi Kondh",
+        "village_name": "Tikabali",
+        "village_code": "OD-KAN-TK-022",
+        "gram_panchayat": "Tikabali GP",
+        "block": "Tikabali",
+        "district": "Kandhamal",
+        "state": "OD",
+        "claim_type": "IFR",
+        "form_number": "Form-A",
+        "area_acres": 1.8,
+        "survey_khasra_no": "88/B",
+        "claim_date": date(2023, 11, 10),
+        "verification_date": date(2024, 1, 15),
+        "status": "pending",
+        "tribal_group": "Kondh",
+        "is_pvtg": True,
+        "gps_lat": 20.1423,
+        "gps_lng": 84.2341,
+      },
+      {
+        "claim_id": "CFR-TG-2024-003421",
+        "claimant_name": "Gram Sabha — Peddapur",
+        "village_name": "Peddapur",
+        "village_code": "TG-KHM-PD-015",
+        "gram_panchayat": "Peddapur GP",
+        "block": "Utnoor",
+        "district": "Kumuram Bheem Asifabad",
+        "state": "TG",
+        "claim_type": "CFR",
+        "form_number": "Form-C",
+        "area_acres": 234.5,
+        "survey_khasra_no": None,
+        "claim_date": date(2024, 1, 20),
+        "verification_date": date(2024, 3, 12),
+        "decision_date": date(2024, 7, 18),
+        "status": "granted",
+        "patte_number": "CFR-TG-KHM-2024-003421",
+        "patte_issued_date": date(2024, 7, 25),
+        "tribal_group": "Gond",
+        "is_pvtg": False,
+        "gps_lat": 19.4821,
+        "gps_lng": 79.2341,
+      },
+      {
+        "claim_id": "IFR-TR-2024-012341",
+        "claimant_name": "Bipul Tripuri",
+        "village_name": "Madhurchhara",
+        "village_code": "TR-WTP-MD-008",
+        "gram_panchayat": "Madhurchhara GP",
+        "block": "Jirania",
+        "district": "West Tripura",
+        "state": "TR",
+        "claim_type": "IFR",
+        "form_number": "Form-A",
+        "area_acres": 1.2,
+        "survey_khasra_no": "234/A",
+        "claim_date": date(2024, 2, 14),
+        "status": "frc-verified",
+        "tribal_group": "Tripuri",
+        "is_pvtg": False,
+        "gps_lat": 23.7421,
+        "gps_lng": 91.2341,
+      },
+      {
+        "claim_id": "IFR-MP-2023-098765",
+        "claimant_name": "Urmila Baiga",
+        "village_name": "Khairwahi",
+        "village_code": "MP-DIN-KH-031",
+        "gram_panchayat": "Khairwahi GP",
+        "block": "Samnapur",
+        "district": "Dindori",
+        "state": "MP",
+        "claim_type": "IFR",
+        "form_number": "Form-A",
+        "area_acres": 3.1,
+        "survey_khasra_no": "451/1",
+        "claim_date": date(2023, 8, 22),
+        "verification_date": date(2023, 10, 14),
+        "decision_date": date(2023, 12, 20),
+        "status": "rejected",
+        "rejection_reason": "Khasra number not mapped to forest land in Revenue records. Discrepancy between claimed boundary and FSI map.",
+        "tribal_group": "Baiga",
+        "is_pvtg": True,
+      },
+    ],
+  )
+
+  grievances_table = sa.table(
+    "grievances",
+    sa.column("grievance_id", sa.String()),
+    sa.column("claimant_name", sa.String()),
+    sa.column("claim_id", sa.String()),
+    sa.column("village_name", sa.String()),
+    sa.column("district", sa.String()),
+    sa.column("state", sa.String()),
+    sa.column("category", sa.String()),
+    sa.column("description", sa.String()),
+    sa.column("status", sa.String()),
+    sa.column("priority", sa.String()),
+    sa.column("assigned_officer_id", sa.String()),
+    sa.column("filed_date", sa.Date()),
+    sa.column("last_updated", sa.DateTime()),
+    sa.column("days_open", sa.Integer()),
+    sa.column("channel", sa.String()),
+    sa.column("block", sa.String()),
+    sa.column("mobile", sa.String()),
+    sa.column("source", sa.String()),
+  )
+  op.bulk_insert(
+    grievances_table,
+    [
+      {
+        "grievance_id": "GR-2026-00891",
+        "claimant_name": "Ramcharan Banjara",
+        "claim_id": "IFR-MP-2024-032412",
+        "village_name": "Ghansore",
+        "district": "Seoni",
+        "state": "MP",
+        "category": "rejection-dispute",
+        "description": "My IFR claim was rejected citing FSI boundary mismatch, but elders of village can confirm we have been farming this land for 30+ years. Requesting re-verification.",
+        "status": "open",
+        "priority": "high",
+        "filed_date": date(2026, 2, 5),
+        "last_updated": datetime(2026, 2, 5, 10, 0, 0),
+        "days_open": 14,
+        "channel": "portal",
+      },
+      {
+        "grievance_id": "GR-2026-00634",
+        "claimant_name": "Sarita Munda",
+        "claim_id": "IFR-OD-2023-089234",
+        "village_name": "Kaptipada",
+        "district": "Mayurbhanj",
+        "state": "OD",
+        "category": "delay",
+        "description": "Claim submitted in October 2023. Still at SDLC level. It has been more than 2 years. No communication received.",
+        "status": "escalated",
+        "priority": "urgent",
+        "assigned_officer_id": "OFF-OD-MBJ-DC001",
+        "filed_date": date(2026, 1, 20),
+        "last_updated": datetime(2026, 2, 10, 14, 0, 0),
+        "days_open": 30,
+        "channel": "whatsapp",
+      },
+    ],
+  )
+
+  data_blobs_table = sa.table(
+    "data_blobs",
+    sa.column("key", sa.String()),
+    sa.column("description", sa.String()),
+    sa.column("payload", mysql.JSON()),
+  )
+  op.bulk_insert(
+    data_blobs_table,
+    [
+      {
+        "key": "national_stats",
+        "description": "National KPI rollup",
+        "payload": {
+          "totalClaims": 5284391,
+          "totalGranted": 2420251,
+          "totalPending": 1984340,
+          "totalRejected": 879800,
+          "totalIFR": 2420251,
+          "totalCFR": 123329,
+          "totalCR": 987421,
+          "ifrAreaAcres": 5545975,
+          "cfrAreaAcres": 18280253,
+          "crAreaAcres": 9234112,
+          "totalVillagesCovered": 63843,
+          "totalPattas": 2420251,
+          "totalFRCActive": 54218,
+          "saturationPct": 45.8,
+        },
+      },
+      {
+        "key": "state_stats",
+        "description": "State level FRA stats",
+        "payload": [
+          {"id": "MP", "name": "Madhya Pradesh", "slug": "madhya-pradesh", "color": "#E87722", "totalClaims": 1284912, "granted": 721435, "pending": 412890, "rejected": 150587, "ifrArea": 1892341, "cfrArea": 4231987, "saturationPct": 56.1, "districts": 52, "villagesCovered": 18921, "tribalGroups": ["Gond", "Bhil", "Baiga", "Korku", "Sahariya"], "pvtgCount": 3, "fireAlerts": 7, "dajguaSaturation": 62},
+          {"id": "OD", "name": "Odisha", "slug": "odisha", "color": "#BE3144", "totalClaims": 1089234, "granted": 652341, "pending": 298123, "rejected": 138770, "ifrArea": 1543210, "cfrArea": 3892341, "saturationPct": 59.8, "districts": 30, "villagesCovered": 15432, "tribalGroups": ["Kondh", "Santhali", "Munda", "Oraon", "Kandha"], "pvtgCount": 13, "fireAlerts": 4, "dajguaSaturation": 58},
+          {"id": "TR", "name": "Tripura", "slug": "tripura", "color": "#2D6A4F", "totalCR": 5, "totalClaims": 312891, "granted": 198432, "pending": 89213, "rejected": 25246, "ifrArea": 487231, "cfrArea": 1023112, "saturationPct": 63.4, "districts": 8, "villagesCovered": 7214, "tribalGroups": ["Tripuri", "Jamatia", "Chakma", "Mog", "Reang"], "pvtgCount": 2, "fireAlerts": 1, "dajguaSaturation": 71},
+          {"id": "TG", "name": "Telangana", "slug": "telangana", "color": "#0D9488", "totalClaims": 893451, "granted": 512893, "pending": 287103, "rejected": 93455, "ifrArea": 1231890, "cfrArea": 3124321, "saturationPct": 57.4, "districts": 33, "villagesCovered": 12312, "tribalGroups": ["Gond", "Koya", "Lambada", "Chenchu", "Kolam"], "pvtgCount": 5, "fireAlerts": 3, "dajguaSaturation": 55},
+        ],
+      },
+      {
+        "key": "district_stats_mp",
+        "description": "District stats for Madhya Pradesh",
+        "payload": [
+          {"id": "MP-BAL", "name": "Balaghat", "grants": 24312, "pending": 8921, "rejected": 3421, "saturation": 68},
+          {"id": "MP-MAN", "name": "Mandla", "grants": 31241, "pending": 12341, "rejected": 4231, "saturation": 72},
+          {"id": "MP-DIN", "name": "Dindori", "grants": 19821, "pending": 7843, "rejected": 2341, "saturation": 65},
+          {"id": "MP-SEO", "name": "Seoni", "grants": 22431, "pending": 9123, "rejected": 3129, "saturation": 61},
+          {"id": "MP-CIN", "name": "Chhindwara", "grants": 28731, "pending": 11234, "rejected": 4123, "saturation": 70},
+          {"id": "MP-JAB", "name": "Jabalpur", "grants": 17234, "pending": 6521, "rejected": 2134, "saturation": 55},
+          {"id": "MP-SHD", "name": "Shahdol", "grants": 21341, "pending": 8923, "rejected": 3021, "saturation": 63},
+          {"id": "MP-UMA", "name": "Umaria", "grants": 16234, "pending": 5923, "rejected": 1921, "saturation": 59},
+        ],
+      },
+      {
+        "key": "district_stats_od",
+        "description": "District stats for Odisha",
+        "payload": [
+          {"id": "OD-KOR", "name": "Koraput", "grants": 42341, "pending": 14231, "rejected": 5123, "saturation": 74},
+          {"id": "OD-RAY", "name": "Rayagada", "grants": 38921, "pending": 13412, "rejected": 4892, "saturation": 71},
+          {"id": "OD-MAL", "name": "Malkangiri", "grants": 29831, "pending": 10213, "rejected": 3421, "saturation": 69},
+          {"id": "OD-NAB", "name": "Nabarangpur", "grants": 34231, "pending": 12341, "rejected": 4231, "saturation": 67},
+          {"id": "OD-KAN", "name": "Kandhamal", "grants": 28431, "pending": 9823, "rejected": 3121, "saturation": 65},
+        ],
+      },
+      {
+        "key": "dss_recommendations",
+        "description": "AI recommendations for scheme linkage",
+        "payload": [
+          {
+            "villageCode": "OD-KOR-LXP-012",
+            "villageName": "Laxmipur Tribal",
+            "schemeId": "JJM",
+            "schemeName": "Jal Jeevan Mission",
+            "ministry": "Ministry of Jal Shakti",
+            "priority": "critical",
+            "triggerCondition": "Groundwater depth > 12m AND tap water coverage < 65%",
+            "eligibleBeneficiaries": 178,
+            "currentlyEnrolled": 112,
+            "gap": 66,
+            "aiScore": 94,
+            "actionRequired": "Dispatch Jal Shakti team for borewell assessment. 66 households without tap connection.",
+            "deadline": "2026-03-31",
+          },
+          {
+            "villageCode": "MP-MAN-BK-001",
+            "villageName": "Sonpur",
+            "schemeId": "DAJGUA",
+            "schemeName": "Dharti Aaba Janjatiya Gram Utkarsh Abhiyan",
+            "ministry": "Ministry of Tribal Affairs",
+            "priority": "high",
+            "triggerCondition": "DA-JGUA saturation < 65% AND IFR granted > 80%",
+            "eligibleBeneficiaries": 212,
+            "currentlyEnrolled": 134,
+            "gap": 78,
+            "aiScore": 87,
+            "actionRequired": "Initiate coverage for 7 pending DA-JGUA interventions in village. Coordinate with 3 line ministries.",
+            "deadline": "2026-06-30",
+          },
+          {
+            "villageCode": "OD-KOR-LXP-012",
+            "villageName": "Laxmipur Tribal",
+            "schemeId": "PM-JANMAN",
+            "schemeName": "PM-JANMAN (PVTG)",
+            "ministry": "Ministry of Tribal Affairs",
+            "priority": "critical",
+            "triggerCondition": "PVTG village AND PM-JANMAN saturation < 60%",
+            "eligibleBeneficiaries": 178,
+            "currentlyEnrolled": 98,
+            "gap": 80,
+            "aiScore": 96,
+            "actionRequired": "PVTG priority village. All 11 PM-JANMAN interventions review required. Escalate to State Nodal Officer.",
+            "deadline": "2026-02-28",
+          },
+          {
+            "villageCode": "TG-KHM-PD-015",
+            "villageName": "Peddapur",
+            "schemeId": "VDVK",
+            "schemeName": "Van Dhan Vikas Kendra",
+            "ministry": "Ministry of Tribal Affairs",
+            "priority": "high",
+            "triggerCondition": "CFR granted AND forest cover > 1500 acres AND no VDVK in 20km",
+            "eligibleBeneficiaries": 89,
+            "currentlyEnrolled": 0,
+            "gap": 89,
+            "aiScore": 82,
+            "actionRequired": "CFR boundary of 234 acres granted. High forest resource potential. Setup VDVK for MFP collection and processing.",
+            "deadline": "2026-04-30",
+          },
+        ],
+      },
+      {
+        "key": "dajgua_interventions",
+        "description": "DA-JGUA intervention tracker",
+        "payload": [
+          {"id": "1", "name": "PM Gram Sadak Yojana (Roads)", "ministry": "MoRD", "targetVillages": 12400, "completedVillages": 7823, "inProgressVillages": 2341, "budgetAllocatedCr": 4200, "budgetUtilizedCr": 2890, "saturationPct": 63, "state": "MP"},
+          {"id": "2", "name": "Jal Jeevan Mission (Water)", "ministry": "MoJSWS", "targetVillages": 12400, "completedVillages": 8234, "inProgressVillages": 1823, "budgetAllocatedCr": 3100, "budgetUtilizedCr": 2341, "saturationPct": 66, "state": "MP"},
+          {"id": "3", "name": "PMAY-Gramin (Housing)", "ministry": "MoRD", "targetVillages": 12400, "completedVillages": 6234, "inProgressVillages": 3421, "budgetAllocatedCr": 5600, "budgetUtilizedCr": 3120, "saturationPct": 50, "state": "MP"},
+          {"id": "4", "name": "EMRS Schools", "ministry": "MoTA", "targetVillages": 8200, "completedVillages": 5123, "inProgressVillages": 1234, "budgetAllocatedCr": 1200, "budgetUtilizedCr": 890, "saturationPct": 62, "state": "MP"},
+          {"id": "5", "name": "Anganwadi Centers", "ministry": "MoWCD", "targetVillages": 12400, "completedVillages": 9231, "inProgressVillages": 892, "budgetAllocatedCr": 890, "budgetUtilizedCr": 712, "saturationPct": 74, "state": "MP"},
+          {"id": "6", "name": "Health Sub-Centers", "ministry": "MoHFW", "targetVillages": 8200, "completedVillages": 5421, "inProgressVillages": 1234, "budgetAllocatedCr": 1400, "budgetUtilizedCr": 980, "saturationPct": 66, "state": "MP"},
+          {"id": "7", "name": "BharatNet Connectivity", "ministry": "MoC", "targetVillages": 12400, "completedVillages": 4231, "inProgressVillages": 3421, "budgetAllocatedCr": 2100, "budgetUtilizedCr": 890, "saturationPct": 34, "state": "MP"},
+          {"id": "8", "name": "SAUBHAGYA (Electrification)", "ministry": "MoP", "targetVillages": 12400, "completedVillages": 10234, "inProgressVillages": 891, "budgetAllocatedCr": 1800, "budgetUtilizedCr": 1620, "saturationPct": 82, "state": "MP"},
+        ],
+      },
+      {
+        "key": "monthly_progress",
+        "description": "Monthly FRA progress",
+        "payload": [
+          {"month": "Jan", "year": 2026, "state": "MP", "claimsReceived": 1234, "claimsVerified": 892, "claimsGranted": 654, "claimsRejected": 82, "totalPattas": 721435, "ifrPattas": 612341, "cfrPattas": 78234, "crPattas": 30860, "ifrAreaAcres": 1892341, "cfrAreaAcres": 4231987, "schemesSaturated": 6},
+          {"month": "Dec", "year": 2025, "state": "MP", "claimsReceived": 1089, "claimsVerified": 832, "claimsGranted": 589, "claimsRejected": 91, "totalPattas": 720781, "ifrPattas": 611921, "cfrPattas": 78134, "crPattas": 30726, "ifrAreaAcres": 1887234, "cfrAreaAcres": 4219432, "schemesSaturated": 6},
+          {"month": "Nov", "year": 2025, "state": "MP", "claimsReceived": 1321, "claimsVerified": 940, "claimsGranted": 712, "claimsRejected": 78, "totalPattas": 720192, "ifrPattas": 611332, "cfrPattas": 78034, "crPattas": 30826, "ifrAreaAcres": 1882134, "cfrAreaAcres": 4207892, "schemesSaturated": 5},
+          {"month": "Oct", "year": 2025, "state": "MP", "claimsReceived": 987, "claimsVerified": 712, "claimsGranted": 534, "claimsRejected": 65, "totalPattas": 719480, "ifrPattas": 610620, "cfrPattas": 77921, "crPattas": 30939, "ifrAreaAcres": 1875231, "cfrAreaAcres": 4196234, "schemesSaturated": 5},
+          {"month": "Sep", "year": 2025, "state": "MP", "claimsReceived": 1124, "claimsVerified": 823, "claimsGranted": 621, "claimsRejected": 71, "totalPattas": 718946, "ifrPattas": 610086, "cfrPattas": 77821, "crPattas": 31039, "ifrAreaAcres": 1869123, "cfrAreaAcres": 4185672, "schemesSaturated": 4},
+          {"month": "Aug", "year": 2025, "state": "MP", "claimsReceived": 1032, "claimsVerified": 745, "claimsGranted": 568, "claimsRejected": 89, "totalPattas": 718325, "ifrPattas": 609465, "cfrPattas": 77712, "crPattas": 31148, "ifrAreaAcres": 1861231, "cfrAreaAcres": 4174213, "schemesSaturated": 4},
+        ],
+      },
+      {
+        "key": "forest_fire_alerts",
+        "description": "Recent forest fire alerts",
+        "payload": [
+          {"id": "FFA-2026-0234", "villageName": "Pachmarhi CFR Zone", "district": "Hoshangabad", "state": "MP", "isCFRZone": True, "detectedAt": "2026-02-18T14:30:00Z", "coordinates": {"lat": 22.4671, "lng": 78.4341}, "confidencePct": 87, "areaAffectedHa": 23.4, "status": "active", "alertLevel": "critical", "source": "ISRO-FIRMS"},
+          {"id": "FFA-2026-0218", "villageName": "Simlipal Buffer Zone", "district": "Mayurbhanj", "state": "OD", "isCFRZone": True, "detectedAt": "2026-02-17T09:15:00Z", "coordinates": {"lat": 21.8234, "lng": 86.1234}, "confidencePct": 92, "areaAffectedHa": 67.1, "status": "controlled", "alertLevel": "high", "source": "ISRO-FIRMS"},
+          {"id": "FFA-2026-0198", "villageName": "Papi Hills Forest", "district": "West Godavari", "state": "TG", "isCFRZone": False, "detectedAt": "2026-02-15T16:45:00Z", "coordinates": {"lat": 17.2341, "lng": 81.9341}, "confidencePct": 76, "areaAffectedHa": 12.8, "status": "extinguished", "alertLevel": "moderate", "source": "VIIRS"},
+        ],
+      },
+      {
+        "key": "field_visit_reports",
+        "description": "Latest field verification reports",
+        "payload": [
+          {
+            "id": "FVR-2026-001234",
+            "claimId": "IFR-OD-2024-007831",
+            "officerId": "OFF-MP-MAN-RO001",
+            "villageName": "Laxmipur",
+            "visitDate": "2026-02-12",
+            "gpsLocation": {"lat": 20.1423, "lng": 84.2341},
+            "gpsBoundary": [
+              {"lat": 20.1410, "lng": 84.2330},
+              {"lat": 20.1435, "lng": 84.2330},
+              {"lat": 20.1435, "lng": 84.2352},
+              {"lat": 20.1410, "lng": 84.2352},
+            ],
+            "photos": ["/mock/visit-photo-1.jpg", "/mock/visit-photo-2.jpg"],
+            "notes": "Land is actively cultivated, paddy fields visible. Matches claimant's description. Recommend approval.",
+            "verificationStatus": "confirmed",
+            "submittedAt": "2026-02-12T17:30:00Z",
+            "syncedAt": "2026-02-12T18:00:00Z",
+          }
+        ],
+      },
+      {
+        "key": "ndvi_trend",
+        "description": "Quarterly NDVI trend",
+        "payload": [
+          {"quarter": "Q1 2024", "sonpur": 0.65, "laxmipur": 0.71, "peddapur": 0.69, "madhurchhara": 0.72},
+          {"quarter": "Q2 2024", "sonpur": 0.62, "laxmipur": 0.69, "peddapur": 0.71, "madhurchhara": 0.74},
+          {"quarter": "Q3 2024", "sonpur": 0.71, "laxmipur": 0.73, "peddapur": 0.68, "madhurchhara": 0.76},
+          {"quarter": "Q4 2024", "sonpur": 0.67, "laxmipur": 0.75, "peddapur": 0.70, "madhurchhara": 0.73},
+          {"quarter": "Q1 2025", "sonpur": 0.66, "laxmipur": 0.72, "peddapur": 0.72, "madhurchhara": 0.78},
+          {"quarter": "Q2 2025", "sonpur": 0.68, "laxmipur": 0.74, "peddapur": 0.71, "madhurchhara": 0.77},
+          {"quarter": "Q3 2025", "sonpur": 0.70, "laxmipur": 0.76, "peddapur": 0.73, "madhurchhara": 0.79},
+          {"quarter": "Q4 2025", "sonpur": 0.68, "laxmipur": 0.74, "peddapur": 0.70, "madhurchhara": 0.76},
+        ],
+      },
+      {
+        "key": "claim_pipeline",
+        "description": "Claim pipeline stage counts",
+        "payload": [
+          {"id": "received", "label": "Received", "color": "#3B82F6", "count": 1284, "labelHi": "प्राप्त"},
+          {"id": "frc-verified", "label": "FRC Verified", "color": "#8B5CF6", "count": 892, "labelHi": "FRC सत्यापित"},
+          {"id": "sdlc-approved", "label": "SDLC Approved", "color": "#F59E0B", "count": 634, "labelHi": "SDLC अनुमोदित"},
+          {"id": "dlc-approved", "label": "DLC Approved", "color": "#10B981", "count": 412, "labelHi": "DLC अनुमोदित"},
+          {"id": "granted", "label": "Patta Issued", "color": "#22C55E", "count": 721435, "labelHi": "पट्टा जारी"},
+          {"id": "rejected", "label": "Rejected", "color": "#EF4444", "count": 150587, "labelHi": "अस्वीकृत"},
+        ],
+      },
+    ],
+  )
+
+
+def downgrade() -> None:
+  op.drop_index("ix_data_blobs_key", table_name="data_blobs")
+  op.drop_table("data_blobs")
+
+  op.drop_index("idx_grievances_status", table_name="grievances")
+  op.drop_index("idx_grievances_state", table_name="grievances")
+  op.drop_index("ix_grievances_grievance_id", table_name="grievances")
+  op.drop_table("grievances")
+
+  op.drop_index("idx_claim_status", table_name="claims")
+  op.drop_index("idx_claim_village", table_name="claims")
+  op.drop_index("idx_claim_district", table_name="claims")
+  op.drop_index("idx_claim_state", table_name="claims")
+  op.drop_index("ix_claims_claim_id", table_name="claims")
+  op.drop_table("claims")
+
+  op.drop_index("ix_officers_officer_id", table_name="officers")
+  op.drop_table("officers")
+
+  op.drop_index("ix_villages_state", table_name="villages")
+  op.drop_index("ix_villages_code", table_name="villages")
+  op.drop_table("villages")
+
+  op.drop_index("ix_users_email", table_name="users")
+  op.drop_table("users")

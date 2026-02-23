@@ -1,0 +1,24 @@
+# robots.txt for Vanaadhikar Drishti - FRA Monitoring System
+
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: http://localhost:3000/sitemap.xml
+
+# Disallow admin/sensitive routes
+Disallow: /api/
+Disallow: /admin/
+
+# Allow public pages
+Allow: /
+Allow: /national-dashboard
+Allow: /analytics
+Allow: /mera-patta
+Allow: /atlas
+Allow: /dss
+Allow: /grievances
+Allow: /digitization
+
+# Crawl-delay for respectful crawling
+Crawl-delay: 1

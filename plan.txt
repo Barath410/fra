@@ -1,0 +1,448 @@
+
+
+Plan: AI-Powered FRA Atlas & WebGIS Decision Support System — SIH 2025/26
+TL;DR — Build "VanAdhikar Drishti" (Forest Rights Vision) — a unified national digital platform hosted on NIC MeghRaj that ingests and digitizes legacy FRA documents via AI-OCR, renders an interactive FRA Atlas with satellite-derived asset maps on a WebGIS portal, and serves a DSS engine that cross-links FRA patta holders with CSS scheme eligibility. Eight distinct role-based web interfaces are designed with an Indian government aesthetic rooted in tribal art, forest tones, and Indic typography — built for offline-capable field usage all the way to national-level policy dashboards. Focus states: Madhya Pradesh, Tripura, Odisha, Telangana.
+
+ech Stack — Full Specification
+Layer	Technology	Rationale
+Frontend	Next.js 14 (TypeScript) + Tailwind CSS + shadcn/ui	SSR for SEO/performance; modular components
+WebGIS Client	Leaflet.js + MapLibre GL JS	Lightweight, offline-capable vector tiles
+GIS Server	GeoServer (WMS / WFS / WCS)	OGC-compliant spatial data serving
+Backend API	FastAPI (Python 3.11)	Fast, async; native AI/ML library integration
+Auth	Keycloak + Jan Parichay (MeitY SSO) + DigiLocker	GOI-compliant SSO; citizen login via Aadhaar-linked
+Primary DB	PostgreSQL 16 + PostGIS extension	Spatial queries, polygons, shapefiles
+Document DB	MongoDB Atlas / NIC-hosted	Unstructured legacy records, OCR outputs
+Search	Elasticsearch	Full-text search across FRA documents
+Cache	Redis	Session cache, API rate limiting, tile caching
+Async Tasks	Celery + Redis broker	AI inference jobs (OCR, satellite processing)
+Object Storage	MinIO (S3-compatible on MeghRaj)	Satellite imagery, scanned PDFs, shapefiles
+AI/ML Runtime	Python + PyTorch + Hugging Face Transformers	OCR, NER, CV models
+Containerization	Docker + Kubernetes (NIC K8s)	Scalable microservices deployment
+Monitoring	Grafana + Prometheus + Loki	Performance, AI job tracking
+CI/CD	GitHub Actions → Docker Hub → Helm charts	Automated staging/production deploy
+Offline Field Sync	PWA (Service Workers) + IndexedDB	Range Officers, FRC in no-connectivity zones
+
+
+┌─────────────────────────────────────────────────────┐
+│         VANAADHIKAR DRISHTI — Platform               │
+│                                                     │
+│  [Next.js Frontend] ←→ [FastAPI Gateway]            │
+│         ↓                      ↓                   │
+│  [Leaflet/MapLibre] ←→ [GeoServer WMS/WFS]          │
+│                         ↓                          │
+│    ┌────────────────────────────────────┐           │
+│    │     MICROSERVICES                  │           │
+│    │  ① OCR-NER Service (FastAPI)       │           │
+│    │  ② Satellite CV Service (FastAPI)  │           │
+│    │  ③ DSS Engine (FastAPI)            │           │
+│    │  ④ Notification Service (FastAPI)  │           │
+│    │  ⑤ Data Sync / ETL Service         │           │
+│    └────────────────────────────────────┘           │
+│         ↓           ↓              ↓               │
+│    [PostgreSQL  [MongoDB]    [MinIO Storage]         │
+│    + PostGIS]   (Docs)       (Imagery/PDFs)         │
+│         ↓                                          │
+│    [Elasticsearch]  [Redis]  [Celery Workers]       │
+└─────────────────────────────────────────────────────┘
+
+Module 1 — AI-Powered Data Digitization Pipeline
+Input: Scanned legacy FRA documents — Form A (IFR claims), Form B (CR claims), Form C (CFR claims), rejection orders, patta certificates — from 4 states in Hindi, Odia, Telugu, and regional tribal scripts.
+
+Step 1 — Document Ingestion:
+
+Bulk upload interface with drag-and-drop; accepts PDF, JPEG, TIFF
+Auto-categorizes document type using a fine-tuned DistilBERT classifier
+Progress bar with batch status per district/block
+Step 2 — OCR Engine:
+
+Primary: PaddleOCR v4 (multilingual; Hindi/Devanagari, Odia, Telugu)
+Fallback: Tesseract 5.x with custom Gondi/Santhali language packs
+For handwritten text: TrOCR (Microsoft, fine-tuned on Indian handwritten datasets)
+Pre-processing: OpenCV deskew, binarization, noise removal, contrast enhancement
+Output: Raw text + bounding box coordinates saved to MongoDB
+Step 3 — NER Extraction:
+
+Model: IndicNER (AI4Bharat) fine-tuned specifically on FRA document corpus
+Entities extracted:
+Patta holder name (primary + family)
+Village name, Gram Sabha
+District / Block / State
+Khasra / Survey number
+Claim ID (IFR/CR/CFR)
+Area in acres/hectares
+Claim status (Received / Verified / Approved / Rejected)
+Date of filing / Date of decision
+GPS coordinates (if present)
+Confidence score attached to each entity
+Low-confidence fields flagged for human review via a QA queue
+Step 4 — Data Standardization:
+
+Fuzzy-match village names against official LGD (Local Government Directory) codes
+Normalize area units, date formats
+Deduplicate records using Levenshtein distance on claimant name + Khasra + village
+Output: Structured JSON → ingested into PostgreSQL FRA master table with full audit trail
+Step 5 — Human-in-the-Loop QA Interface:
+
+Displays original scanned image alongside extracted data
+Officers correct, confirm, or reject entity tags
+Corrections fed back as fine-tuning data for continuous model improvement
+
+Module 2 — Interactive FRA Atlas (WebGIS)
+Base Map Options:
+
+ISRO Bhuvan satellite tiles (default — India-specific, high res)
+OpenStreetMap (fallback)
+ESRI World Imagery (premium layer option)
+Revenue/Cadastral map overlay (from state land records portals via WMS)
+Spatial Layers Stack (toggle-able):
+
+Layer	Source	Format
+State/District/Block/Village admin boundaries	Census 2011 + LGD	GeoJSON/PostGIS
+IFR patta boundaries (individual)	State FRA cells + digitized data	Shapefile → PostGIS
+CFR/CR boundaries	State Forest Depts	Shapefile → PostGIS
+Forest Survey of India forest cover	FSI biennial report	Raster/WMS
+Revenue cadastral maps (Khasra)	State land record portals	WMS API
+AI-detected farmland	Satellite CV output	GeoTIFF overlay
+AI-detected water bodies	Satellite CV output	Vector +GeoTIFF
+NDVI vegetation health	Sentinel-2 (ESA Copernicus, free)	Raster tiles
+Groundwater depth	CGWB (Central Groundwater Board)	Point + heatmap
+PM Gati Shakti infra layer	API integration	WMS feed
+DA-JGUA saturation status	Ministry API	Choropleth
+CSS scheme coverage (PM-KISAN, JJM, MGNREGA)	PM-KISAN / MoRD APIs	Polygon overlay
+Forest fires (real-time)	ISRO FIRMS / VIIRS data	Alert pins
+WebGIS Interactions:
+
+Click any village polygon → slide-up panel shows FRA stats, asset inventory, scheme coverage, gap analysis
+Draw tool: officers can sketch new claim boundaries and submit for review
+Measure tool: area and perimeter calculation for CFR boundaries
+Time-slider: animate patta grant progress from 2006 → present year
+Heatmap mode: density of claims received vs. granted per district
+Compare mode: split-screen before/after satellite images (2-year intervals)
+Export: download selected area as PDF report, shapefile, or CSV
+Module 3 — AI-Based Satellite Asset Mapping
+Satellite Data Source: Sentinel-2 (ESA Copernicus, 10m resolution, free API) + optional Resourcesat-2 (ISRO Bhuvan) for India-specific high-res imagery.
+
+Computer Vision Pipeline:
+Raw Satellite Tiles (GeoTIFF)
+    ↓  [GDAL preprocessing — clip to village boundary]
+    ↓  [Radiometric calibration + band compositing]
+    ↓  [U-Net Semantic Segmentation Model]
+         Classes: Agricultural land | Dense forest | 
+                  Degraded forest | Water body |
+                  Homestead/settlement | Bare land | 
+                  Plantation | Scrubland
+    ↓  [Post-processing: morphological ops, min-area filter]
+    ↓  [Vectorization: raster → GeoJSON polygons]
+    ↓  [Area calculation per class per village]
+    ↓  [Stored in PostGIS + displayed as WebGIS layer]
+
+NDVI Monitoring:
+N
+D
+V
+I
+=
+N
+I
+R
+−
+R
+E
+D
+N
+I
+R
++
+R
+E
+D
+NDVI= 
+NIR+RED
+NIR−RED
+​
+ 
+
+Computed quarterly from Sentinel-2 Band 8 (NIR) + Band 4 (RED)
+NDVI < 0.2 → alert for forest degradation in CFR zones
+NDVI trend over 3 years → "forest health score" per CFR village
+Water Body Detection:
+
+NDWI (Normalized Difference Water Index) for pond/stream detection
+Alert system: seasonal water bodies disappearing → triggers Jal Shakti scheme flag in DSS
+Additional Data Layers:
+
+Forest cover change (deforestation alerts): Google Earth Engine API for annual change detection
+Groundwater data: CGWB district-level depth to water table
+Infrastructure gaps: PM Gati Shakti layer (schools, hospitals, roads within 5 km radius of village)
+Soil data: ICAR Soil Health Card API integration for agricultural recommendations
+Module 4 — Decision Support System (DSS) Engine
+Core Logic — Eligibility Matrix:
+
+For every FRA patta holder village, the DSS evaluates 25+ parameters and outputs a ranked list of recommended CSS interventions.
+
+Rule-Based Layer (deterministic):
+
+Trigger Condition	Recommended Scheme	Ministry
+IFR patta granted + no PM-KISAN enrollment	PM-KISAN (₹6000/yr)	MoA
+Water body index low + CGWB depth > 10m	Borewell under Jal Shakti Abhiyan	MoJSWS
+CFR village + NDVI declining	Van Dhan Vikas Kendra setup	MoTA
+No pucca house in village + FRA title held	PMAY-G (Grameen)	MoRD
+MGNREGA job card not issued to patta holders	MGNREGA enrollment drive	MoRD
+School > 5 km away	EMRS / Eklavya school	MoTA
+No Anganwadi within 3 km	ICDS center	MoWCD
+Unelectrified households	SAUBHAGYA / DDUGJY	MoP
+No telecom connectivity	BharatNet Phase 3	MoC
+PVTG community FRA village	PM-JANMAN all 11 interventions	MoTA
+AI-Enhanced Layer (ML scoring):
+
+XGBoost model trained on historical scheme uptake data to predict which villages have highest unmet demand
+Multi-label classification: each village gets probability scores for top-5 most needed interventions
+"Saturation Score" (0–100%) per village = % of applicable schemes with active beneficiaries
+Villages with saturation < 40% flagged as "Priority Intervention Zones" on the Atlas map
+Gap Analysis Engine:
+
+Pulls real-time data from PM-KISAN API, JJM IMIS, MGNREGA MIS
+Compares FRA patta holder count with enrolled beneficiary count per scheme
+Generates gap report: "X patta holders in village Y are eligible for PM-KISAN but not enrolled"
+One-click escalation: generates official communication draft to relevant line department
+DA-JGUA Dashboard Integration:
+
+Maps all 25 DA-JGUA interventions against FRA villages in the 4 focus states
+Tracks physical and financial progress per intervention per block
+Shows convergence potential: overlays DA-JGUA gaps with FRA patta distribution
+Module 5 — Eight Role-Based Web Interfaces
+Design System — "VanAdhikar Drishti" Identity
+Color Palette:
+
+Primary: Deep Forest Green #1A3C2E (headers, nav bars)
+Secondary: Saffron #E87722 (CTAs, highlights, alerts)
+Accent: Earthy Terracotta #B5541A (secondary actions)
+Background: Parchment #F4EDE3 (content areas — evokes legacy document aesthetic)
+Surface: White #FFFFFF (cards)
+Text: Charcoal #1C1C1C
+Typography:
+
+Headings: Noto Serif Devanagari (for Hindi labels) / Noto Serif (English)
+Body: Noto Sans Devanagari (+Noto Sans for Latin, +Noto Sans Telugu, +Noto Sans Odia)
+Data/Code: JetBrains Mono
+Visual Identity:
+
+Subtle Gond art / Warli-inspired geometric patterns as card border textures and loading screens
+National Emblem + MoTA logo in top-left (mandatory for GOI portals)
+Ashoka Pillars motif as section dividers
+Forest canopy silhouette as hero section background in public-facing pages
+Progress rings styled as tribal circular motifs
+Layout Philosophy:
+
+70% map / 30% data panel on Atlas views (field officers need spatial context first)
+Card-based dashboards with key metrics in bold numerics (stat cards)
+Color-coded status systems: Green (granted) / Yellow (in process) / Red (rejected/pending)
+Sticky, always-visible action button for "Quick Escalate" / "Add Report"
+GIGW 3.0 compliance: skip nav, ARIA labels, screen reader support, high-contrast toggle
+Interface 1 — MoTA National Nodal Officer Dashboard
+URL: /national-dashboard
+
+Screens:
+
+National FRA Atlas (all states, all layers)
+Heatmap: state-wise claim granted % and saturation score
+DA-JGUA convergence tracker (25 interventions × 30 states)
+AI monthly progress report (auto-generated NLP summary of trends)
+Alert feed: significant forest fires in CFR zones, mass rejections anomaly detection
+Policy scenario tool: "What if we target X scheme to all CFR villages in Odisha?" — impact simulation
+Document repository: all guidelines, circulars, executive directions
+Interoperability board: API sync status with PM-KISAN, JJM, MGNREGA portals
+Export: QGIS-compatible shapefile download + PDF atlas snapshots for Parliament presentations
+Interface 2 — State Tribal Welfare Commissioner/Secretary Portal
+URL: /state/:stateCode/dashboard
+
+States: Madhya Pradesh, Odisha, Tripura, Telangana (with state-specific branding overlays — e.g., MP's "Maharishi Valmiki" tribal insignia)
+
+Screens:
+
+State FRA Atlas (district-level zoom)
+District-wise claim pipeline Kanban: Received → FRC verified → SDLC approved → DLC approved → Patta issued
+District officer performance matrix (claims processed per officer, average resolution time)
+State CSS saturation scorecard across DA-JGUA 25 interventions
+Budget vs. expenditure tracker (DAPST fund utilization)
+Grievance escalation inbox (unresolved > 30 days auto-highlighted)
+Monthly report generator (auto-fill format required by MoTA)
+State-specific tribal group filter (e.g., Gond/Bhil in MP; Kondh/Santhali in Odisha)
+Interface 3 — District Collector / DRDA Portal
+URL: /district/:districtCode/dashboard
+
+Screens:
+
+District FRA Atlas (block/village zoom)
+DSS Intervention Heatmap: shows top-5 recommended schemes per village in the district
+Gap report table: list of patta holders not enrolled in each CSS scheme
+Claim decision queue (pending > 60 days flagged red)
+One-click "Convergence Meeting Generator" — auto-creates agenda, beneficiary lists for line department coordination meeting
+Infrastructure proximity tool: for any FRA village, show nearest school/hospital/road/bank on map
+Field officer GPS activity tracker (Range Officers' last active location timestamped)
+Alert: seasonal crop stress for FRA farms (NDVI + rainfall deviation)
+Interface 4 — SDLC/DLC Officer (Sub-Divisional/District Level Committee)
+URL: /sdlc/:id/portal
+
+Screens:
+
+Claim adjudication queue (Form A/B/C list with AI-extracted summaries)
+Side-by-side view: scanned original document + AI-extracted data + satellite map of claimed area
+One-click field verification request dispatch to Range Officer
+Record of Rights (RoR) digital issuance module
+Rejection notes tool with pre-defined reason codes + custom notes
+Hearing scheduler (video conferencing link for remote hearings via NIC VC)
+Petition tracking (appeals from rejected claimants)
+Digitally signed patta generation (eSign / DSC integration) — PDF output with QR code
+Interface 5 — Range Forest Officer Field App (Mobile-First PWA)
+URL: /field-officer/:id
+
+Design Priority: Works fully offline; syncs when connectivity available.
+
+Screens:
+
+Map view with my assigned FRA claim sites pinned (works offline via cached tiles)
+Claim site visit form: GPS auto-capture, timestamp, photo upload (up to 10 images), voice-to-text notes
+Boundary GPS walk: "walk the perimeter" tool that records a live GPS polygon of the claimed area
+Old vs. New satellite compare at the exact site location
+Submit report (queues offline, sends when connected)
+Notification center: new claims assigned, DLC queries
+Patta holder contact directory (encrypted local storage)
+Reference: offline copy of FRA Act/Rules + state-specific SOP
+Interface 6 — Gram Sabha / Forest Rights Committee (FRC) Portal
+URL: /gram-sabha/:villageCode
+
+Design: Maximum visual, minimum text. Available in Hindi, Odia, Telugu, Kokborok (Tripura).
+
+Screens:
+
+Village FRA status summary (with illustrated infographic-style layout, Warli art iconography)
+Claim submission wizard (Form A/B/C) — guided 5-step form with visual icons for each field
+Photo/document upload: camera capture directly from mobile
+"My Patta" status card — single card showing claim ID, current stage, last action, next step (village-level)
+CFR community map: village can see their CFR boundary + asset inventory (ponds, farms, etc.)
+DA-JGUA pending schemes panel — "Your village is eligible for these 8 schemes. Status of each:"
+Grievance submission — single-window complaint with category selection
+WhatsApp integration: "Get updates on WhatsApp" — sends claim status updates via Bhashini + WhatsApp Business API
+Village digital noticeboard (Gram Sabha meeting dates, documents)
+Interface 7 — NGO / Researcher / Civil Society Portal
+URL: /analytics
+
+Access: Read-only; registered NGOs get district-level data; researchers get anonymized state-level data.
+
+Screens:
+
+Open FRA Atlas (no PII, aggregated polygons only)
+Spatial analytics builder: drag-and-drop layer combiner with export
+Trend charts: national/state FRA progress from 2006—present
+Forest health monitor: NDVI trends for CFR zones across all 4 states
+Data export: CSV/Shapefile downloads of non-PII summarized datasets
+Research API: REST API with OAuth2 for programmatic data access
+Report library: all MoTA circulars, state monthly progress reports, AI-generated summaries
+Interface 8 — Patta Holder Citizen Self-Service Portal (Public)
+URL: /mera-patta ("My Patta")
+
+Design: Ultra-simple. Single purpose. Works on basic Android (Chrome). Available in 10 regional languages.
+
+Screens:
+
+Home: Logo, two large buttons — "Check Claim Status" and "Apply for Scheme"
+Claim status check: Enter Claim ID or Aadhaar (masked) → show current stage with timeline graphic
+Scheme eligibility check: Enter patta ID → show "You are eligible for:" list with apply links
+Document download: Download patta certificate (as QR-stamped PDF)
+Grievance submission: one-form, WhatsApp notification on response
+Helpline: click-to-call +011-23340513 button prominently displayed
+Language switcher: top-right; supports and saves language preference
+Module 6 — Data Ingestion & Integration Architecture
+Legacy Data Onboarding Pipeline:
+
+State FRA cells receive scanning kits (state government coordinates)
+Scanned documents uploaded to MinIO via secure VPN endpoint
+Celery async job triggers: OCR → NER → Standardization → QA flag
+QA officer reviews flagged records via [Interface 4 SDLC]
+Confirmed records inserted into PostgreSQL master FRA table
+Spatial: shapefiles uploaded to GeoServer, linked to PostgreSQL record via FRA ID
+External API Integrations:
+
+System	Integration Type	Data
+PM-KISAN MIS	REST API (MoA)	Beneficiary enrollment data
+JJM-IMIS	REST API (MoJSWS)	Household tap water connection status
+MGNREGA MIS	REST API (MoRD)	Job card + employment days data
+LGD (Local Govt Directory)	REST API (MoPR)	Village codes, hierarchy
+Bhuvan / ISRO	WMS/WCS API	Satellite base tiles, ResourceSat imagery
+ESA Copernicus (Sentinel)	OData API	Sentinel-2 multispectral imagery
+PM Gati Shakti	WMS feed (NIC)	Infrastructure layers
+CGWB	REST API	Groundwater level data
+DigiLocker	OAuth2 API	Citizen identity verification
+Bhashini (MeitY)	REST API	Real-time translation (10 languages)
+WhatsApp Business API	Webhook	Citizen notifications
+ISRO FIRMS	REST API	Forest fire alerts
+Module 7 — Security & Compliance Architecture
+Authentication: Keycloak with RBAC (8 roles); Jan Parichay for GOI staff SSO; DigiLocker for citizen login
+MFA: TOTP authenticator for Collector level and above; OTP for lower roles
+Encryption: AES-256 at rest (MinIO, PostgreSQL); TLS 1.3 in transit
+Data masking: Aadhaar numbers, mobile numbers masked in all views except patta holder's own record
+Audit logs: All data mutations timestamped with user ID, IP, role — stored in append-only log table
+GIGW 3.0: WCAG 2.1 AA, skip navigation, ARIA landmarks, contrast ratio ≥ 4.5:1
+STQC certification: Architecture designed for STQC compliance (needed for GOI portals)
+Hosting: NIC MeghRaj (Government Community Cloud) — mandatory for MoTA data sovereignty
+Phase-wise Implementation Roadmap
+Phase 0 — SIH Demo Sprint (36 Hours)
+(What to build for the hackathon)
+
+Complete UI shell in Next.js with all 8 role interfaces (seeded mock data)
+Working Leaflet.js FRA Atlas with 6 toggle layers (use GeoJSON sample data for MP/Odisha)
+Functional OCR-NER demo: upload sample FRA document → extract entities live
+Functional DSS Engine: input village profile → output scheme recommendations
+Satellite NDVI layer displayed for a sample CFR village in Odisha
+Mobile-responsive Gram Sabha interface with multilingual toggle (Hindi/English/Odia)
+Live DSS gap report for one sample district
+3-minute pitch video showing all dashboards and AI functions
+Phase 1 — Foundation (Months 1–4)
+
+Digitization of legacy FRA records for 4 states (AI pipeline operational)
+Baseline WebGIS portal live (MeghRaj hosted)
+Core PostgreSQL + PostGIS database with standardized FRA schema
+Keycloak RBAC for 5 roles operational
+GeoServer serving IFR/CFR boundary layers for all 4 states
+Phase 2 — Intelligence Layer (Months 5–10)
+
+Satellite asset mapping deployed for all FRA villages in 4 states
+NDVI quarterly monitoring active
+DSS engine live with PM-KISAN, JJM, MGNREGA API integrations
+Field Officer PWA (offline-capable) released
+Gram Sabha portal with WhatsApp notifications live
+DA-JGUA convergence dashboard integrated
+Phase 3 — Scale & Saturation (Months 11–18)
+
+Real-time forest fire alert integration (ISRO FIRMS)
+National rollout beyond 4 states
+Mobile citizen app (React Native) for patta holders
+Advanced AI: forest encroachment detection, seasonal crop yield estimation
+IoT sensor integration pilot (soil/water quality in 10 CFR villages)
+ULPIN/Bhu-Aadhar integration when available
+Verification Strategy
+For SIH Demo:
+
+Live demo: upload a real-looking scanned FRA document → watch OCR + NER extract it in real time
+Interactive atlas: show district-level choropleth switching between IFR granted %, NDVI health, and scheme gap maps
+DSS: enter a village → show eligibility matrix → click "generate gap report" → PDF downloads
+Role switch: log in as Range Officer on mobile → log in as Collector on desktop, same data flow
+Post-Deployment Metrics:
+
+OCR accuracy ≥ 92% on standard FRA forms (measured against human QA)
+NER F1 score ≥ 0.85 on entity extraction benchmark
+Satellite land-use classification accuracy ≥ 88% (vs. ground truth)
+WebGIS map load time ≤ 3 seconds on 4G
+DSS scheme recommendation acceptance rate (tracked via feed)
+Decisions
+Atlas name chosen: "VanAdhikar Drishti" (Forest Rights Vision) — evocative, bilingual-friendly, brand-able
+Satellite source: ESA Sentinel-2 (free, 10m, 5-day revisit) over commercial MAXAR/Planet to stay within zero-budget for college team
+GIS client: Leaflet.js + MapLibre GL over ArcGIS Online — fully open source, NIC-hostable, zero licensing
+OCR: PaddleOCR primary for Indic script superiority over Tesseract alone; TrOCR for handwritten
+Auth: Keycloak over Firebase Auth — required for GOI Jan Parichay compatibility
+State branding: Each state portal has a sub-theme color overlay (MP: orange; Odisha: maroon; Tripura: olive; Telangana: teal) while keeping the national design system intact
+No commercial maps (Google Maps): Bhuvan (ISRO) as primary base map — mandatory for sensitive forest boundary data on government platforms
+
+
+

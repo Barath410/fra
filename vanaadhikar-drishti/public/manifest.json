@@ -1,0 +1,24 @@
+{
+    "name": "Vanaadhikar Drishti - FRA Monitoring System",
+    "short_name": "FRA Monitor",
+    "description": "Forest Rights Act (FRA) Monitoring and Decision Support System for India",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#007BFF",
+    "orientation": "portrait",
+    "icons": [
+        {
+            "src": "/favicon.ico",
+            "sizes": "any",
+            "type": "image/x-icon"
+        }
+    ],
+    "categories": [
+        "government",
+        "utilities"
+    ],
+    "lang": "en-IN",
+    "dir": "ltr",
+    "scope": "/"
+}

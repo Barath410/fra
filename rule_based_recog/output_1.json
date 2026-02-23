@@ -1,0 +1,21 @@
+[
+  {
+    "template_id": "DOC_CLAIM_COMMUNITY_FOREST_RESOURCE",
+    "entities": {
+      "STATE": "मध्यप्रदेश",
+      "DISTRICT": "मंडला",
+      "TEHSIL_TALUKA": "निवास",
+      "VILLAGE": "भीमराई",
+      "GRAM_PANCHAYAT": "भीमराई",
+      "GRAM_SABHA": "भीमराई",
+      "GRAM_SABHA_MEMBER_NAME": "रामलाल मरावी",
+      "CATEGORY_SCHEDULED_TRIBE": "अनुसूचित जनजाति",
+      "CATEGORY_OTHER_TRADITIONAL_FOREST_DWELLER": "अन्य पारंपरिक वनवासी",
+      "KHASRA_COMPARTMENT_NUMBER": "145/2A",
+      "BORDERING_VILLAGE": "कन्हेरी और देवगांव",
+      "BOUNDARY_DESCRIPTION": "उत्तर में नर्मदा नदी, दक्षिण में आरक्षित वन, पूर्व में पहाड़ी क्षेत्र और पश्चिम में कृषि भूमि",
+      "COMMUNITY_FOREST_RESOURCE_EVIDENCE_LIST": "1995 का वन रिकॉर्ड, ग्राम सभा प्रस्ताव प्रति, राजस्व नक्शा प्रति",
+      "EVIDENCE_ITEM": "1980 की मतदाता सूची और वन अधिकार समिति की रिपोर्ट"
+    }
+  }
+]

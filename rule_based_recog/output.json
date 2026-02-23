@@ -1,0 +1,32 @@
+[
+  {
+    "template_id": "DOC_CLAIM_FOREST_LAND",
+    "entities": {
+      "CLAIMANT_NAME": "முருகன் குமார்",
+      "FATHER_MOTHER_NAME": "ராமசாம",
+      "SPOUSE_NAME": "லட்சுமி அம்மாள",
+      "ADDRESS_FULL": "12/4, வடக்கு தெரு, செம்பட்டி குடியிருப்பு, கிழக்குப்பட்டி கிராமம்",
+      "STATE": "தமிழ்நாடு",
+      "DISTRICT": "மதுரை",
+      "TEHSIL_TALUKA": "உசிலம்பட்டி",
+      "VILLAGE": "கிழக்குப்பட்டி",
+      "GRAM_PANCHAYAT": "செம்பட்டி",
+      "GRAM_SABHA": "கிழக்குப்பட்டி",
+      "CATEGORY_SCHEDULED_TRIBE": "பட்டியலிடப்பட்ட பழங்குடியினர்",
+      "CATEGORY_OTHER_TRADITIONAL_FOREST_DWELLER": "பிற பாரம்பரிய வனவாசிகள்",
+      "FAMILY_MEMBER_NAME": "அருண் முருகன்",
+      "FAMILY_MEMBER_AGE": "22",
+      "DEPENDENT_NAME": "மினாட்சி முருகன்",
+      "LAND_EXTENT_HABITATION": "1.25 ஏக்கர்",
+      "LAND_EXTENT_SELF_CULTIVATION": "2.00 ஏக்கர்",
+      "LAND_EXTENT_FOREST_VILLAGE": "0.75 ஏக்கர்",
+      "DISPUTED_LAND_DESCRIPTION": "எதுவும் இல்லை",
+      "EXISTING_PATTAS_LEASES_GRANTS": "1998-ம் ஆண்டு வழங்கப்பட்ட தற்காலிக குத்தகை ஆவணம",
+      "REHABILITATION_LAND": "பொருந்தாது",
+      "DISPLACED_FROM_LAND": "இல்லை",
+      "OTHER_TRADITIONAL_RIGHT": "எரிகட்டைகள் சேகரிக்கும் உரிமை மற்றும் கால்நடை மேய்ச்சல் உரிமை",
+      "EVIDENCE_ITEM": "1985-ம் ஆண்டு வாக்காளர் பட்டியல் நகல், வருவாய்த் துறை ரசீது, கிராம சபை தீர்மான நகல",
+      "OTHER_INFORMATION": "இக்குடும்பம் கடந்த 40 ஆண்டுகளாக இப்பகுதியில் வசித்து வருகிறது"
+    }
+  }
+]
